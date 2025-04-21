@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #menu {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #playButton, #restartButton {
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+
+        #playButton:hover, #restartButton:hover {
+            background-color: #45a049;
+        }
+
+        #rules {
+            color: red;
+            font-size: 16px;
+            margin-top: 20px;
+            text-align: left;
+            max-width: 400px;
+        }
+
+        #game {
+            display: none;
+            border: 2px solid #555;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(9, 40px);
+            grid-template-rows: repeat(9, 40px);
+            gap: 2px;
+            padding: 10px;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            background-color: #ddd;
+            border: 1px solid #bbb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .cell:hover {
+            background-color: #ccc;
+        }
+
+        .mine {
+            background-image: url('https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/37817d49-a5a5-4ae6-9128-16049f4d1f18/dgzfv74-95ca6c61-455c-4a10-84ea-ebac7b3ed344.png/v1/fill/w_1280,h_1280,q_80,strp/my_own_minesweeper_mine_by_tomthedeviant2_dgzfv74-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTI4MCIsInBhdGgiOiJcL2ZcLzM3ODE3ZDQ5LWE1YTUtNGFlNi05MTI4LTE2MDQ5ZjRkMWYxOFwvZGd6ZnY3NC05NWNhNmM2MS00NTVjLTRhMTAtODRlYS1lYmFjN2IzZWQzNDQucG5nIiwid2lkdGgiOiI8PTEyODAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.Qh2j3UM8QogpWSwGhY5GjVOQAhmdijAlL1cDjAAiAPA');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .revealed {
+            background-color: #eee;
+            cursor: default;
+        }
+
+        #gameOver {
+            display: none;
+            font-size: 24px;
+            color: red;
+            text-align: center;
+        }
+
+        #gameWin {
+            display: none;
+            font-size: 24px;
+            color: green;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        /* Firework animations */
+        #fireworks {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .firework {
+            position: absolute;
+            background-color: orange;
+            border-radius: 50%;
+            width: 5px;
+            height: 5px;
+            animation: explode 1s ease-out infinite;
+        }
+
+        @keyframes explode {
+            0% { transform: scale(0.1); }
+            100% { transform: scale(2); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="menu">
+    <h1>Minesweeper Game</h1>
+    <button id="playButton">Play</button>
+    <div id="rules">
+        <h3>How to Play Minesweeper (For Beginners):</h3>
+        <ul>
+            <li>Your goal is to reveal all the boxes without mines.</li>
+            <li>Numbers on boxes show how many mines are nearby (in adjacent squares).</li>
+            <li>If you click a mine, you lose! Be careful!</li>
+            <li>Right-click to place a flag where you think a mine is hidden.</li>
+            <li>Use logic to avoid the mines and reveal all safe boxes to win!</li>
+        </ul>
+    </div>
+</div>
+
+<div id="game">
+    <h2 style="margin-bottom: 10px; text-align: center;">Minesweeper</h2>
+    <div id="restartButton" style="margin-bottom: 10px; text-align: center; cursor: pointer;">Restart Game</div>
+    <div class="grid" id="grid"></div>
+    <div id="gameOver">Game Over!</div>
+    <div id="gameWin">Congratulations! You Win!</div>
+</div>
+
+<div id="fireworks"></div>
+
+<script>
+    const playButton = document.getElementById('playButton');
+    const restartButton = document.getElementById('restartButton');
+    const game = document.getElementById('game');
+    const grid = document.getElementById('grid');
+    const gameOverText = document.getElementById('gameOver');
+    const gameWinText = document.getElementById('gameWin');
+    const fireworks = document.getElementById('fireworks');
+    const rules = document.getElementById('rules');
+    const menu = document.getElementById('menu');
+    const rows = 9;
+    const cols = 9;
+    const totalMines = 10;
+    let board = [];
+    let isGameOver = false;
+    let cellsRevealed = 0;
+    const totalCells = rows * cols - totalMines;
+
+    playButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', restartGame);
+
+    function startGame() {
+        rules.style.display = 'none'; // Hide the rules when game starts
+        menu.style.display = 'none';  // Hide the menu when game starts
+        board = createBoard();
+        renderBoard();
+        game.style.display = 'block';
+        gameOverText.style.display = 'none';
+        gameWinText.style.display = 'none';
+        fireworks.innerHTML = ''; // Clear fireworks on restart
+        isGameOver = false;
+        cellsRevealed = 0;
+    }
+
+    function restartGame() {
+        startGame();
+    }
+
+    function createBoard() {
+        let board = Array(rows).fill(null).map(() => Array(cols).fill(0));
+        let minesPlaced = 0;
+
+        while (minesPlaced < totalMines) {
+            const row = Math.floor(Math.random() * rows);
+            const col = Math.floor(Math.random() * cols);
+
+            if (board[row][col] !== '💣') {
+                board[row][col] = '💣';
+                minesPlaced++;
+                incrementSurroundingCells(board, row, col);
+            }
+        }
+
+        return board;
+    }
+
+    function incrementSurroundingCells(board, row, col) {
+        for (let i = row - 1; i <= row + 1; i++) {
+            for (let j = col - 1; j <= col + 1; j++) {
+                if (i >= 0 && i < rows && j >= 0 && j < cols && board[i][j] !== '💣') {
+                    board[i][j]++;
+                }
+            }
+        }
+    }
+
+    function renderBoard() {
+        grid.innerHTML = '';
+        board.forEach((row, rIdx) => {
+            row.forEach((cell, cIdx) => {
+                const cellElement = document.createElement('div');
+                cellElement.classList.add('cell');
+                cellElement.dataset.row = rIdx;
+                cellElement.dataset.col = cIdx;
+
+                cellElement.addEventListener('click', () => handleCellClick(rIdx, cIdx));
+
+                grid.appendChild(cellElement);
+            });
+        });
+    }
+
+    function handleCellClick(row, col) {
+        if (isGameOver) return;
+
+        const cell = board[row][col];
+        const cellElement = document.querySelector(`.cell[data-row='${row}'][data-col='${col}']`);
+
+        if (cellElement.classList.contains('revealed')) return; // Avoid clicking revealed cells
+
+        if (cell === '💣') {
+            cellElement.classList.add('mine');
+            revealAllMines();
+            gameOver();
+        } else {
+            revealCell(row, col, cellElement);
+            checkForWin();
+        }
+    }
+
+    function revealCell(row, col, cellElement) {
+        if (cellElement.classList.contains('revealed')) return; // Avoid revealing already revealed cells
+
+        const cellValue = board[row][col];
+        cellElement.classList.add('revealed');
+        cellElement.innerText = cellValue > 0 ? cellValue : '';
+        cellsRevealed++;
+
+        if (cellValue === 0) {
+            const queue = [[row, col]];
+            while (queue.length) {
+                const [curRow, curCol] = queue.shift();
+
+                for (let i = curRow - 1; i <= curRow + 1; i++) {
+                    for (let j = curCol - 1; j <= curCol + 1; j++) {
+                        if (i >= 0 && i < rows && j >= 0 && j < cols) {
+                            const nextCell = board[i][j];
+                            const nextCellElement = document.querySelector(`.cell[data-row='${i}'][data-col='${j}']`);
+                            if (nextCell !== '💣' && !nextCellElement.classList.contains('revealed')) {
+                                revealCell(i, j, nextCellElement);
+                                if (nextCell === 0) {
+                                    queue.push([i, j]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function revealAllMines() {
+        board.forEach((row, rIdx) => {
+            row.forEach((cell, cIdx) => {
+                if (cell === '💣') {
+                    const mineCell = document.querySelector(`.cell[data-row='${rIdx}'][data-col='${cIdx}']`);
+                    mineCell.classList.add('mine');
+                }
+            });
+        });
+    }
+
+    function gameOver() {
+        isGameOver = true;
+        gameOverText.style.display = 'block';
+    }
+
+    function checkForWin() {
+        if (cellsRevealed === totalCells) {
+            isGameOver = true;
+            gameWinText.style.display = 'block';
+            createFireworks();
+        }
+    }
+
+    function createFireworks() {
+        for (let i = 0; i < 30; i++) {
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            firework.style.left = Math.random() * 100 + 'vw';
+            firework.style.bottom = Math.random() * 100 + 'vh';
+            firework.style.animationDelay = Math.random() * 2 + 's';
+            fireworks.appendChild(firework);
+
+            setTimeout(() => {
+                fireworks.removeChild(firework);
+            }, 2000);
+        }
+    }
+</script>
+</body>
+</html>
